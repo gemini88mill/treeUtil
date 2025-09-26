@@ -7,8 +7,10 @@ pnpm-debug.log*
 
 # Build outputs
 dist/
+dist-pkg/
 build/
 out/
+bin/
 
 # TypeScript build info
 *.tsbuildinfo

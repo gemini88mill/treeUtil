@@ -8,11 +8,17 @@
     "tree-util": "./dist/src/cli.js"
   },
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/cli.js",
-    "dev": "tsx src/cli.ts",
-    "test": "tsx test/test.ts",
-    "clean": "rimraf dist"
+    "build": "bun run tsc",
+    "build:pkg": "bun run tsc --project tsconfig.pkg.json",
+    "start": "bun run dist/src/cli.js",
+    "dev": "bun run src/cli.ts",
+    "test": "bun run test/test.ts",
+    "clean": "rimraf dist dist-pkg bin",
+    "build:standalone": "bun run build:pkg && pkg dist-pkg/src/cli.js --compress GZip",
+    "build:win": "bun run build:pkg && pkg dist-pkg/src/cli.js --target node18-win-x64 --output bin/tree-util-win.exe --compress GZip",
+    "build:linux": "bun run build:pkg && pkg dist-pkg/src/cli.js --target node18-linux-x64 --output bin/tree-util-linux --compress GZip",
+    "build:macos": "bun run build:pkg && pkg dist-pkg/src/cli.js --target node18-macos-x64 --output bin/tree-util-macos --compress GZip",
+    "build:all": "bun run build:pkg && pkg dist-pkg/src/cli.js --targets node18-win-x64,node18-linux-x64,node18-macos-x64,node18-macos-arm64 --output bin/tree-util --compress GZip"
   },
   "keywords": [
     "tree",
@@ -30,8 +36,27 @@
   "devDependencies": {
     "@types/node": "^20.10.0",
     "chalk": "^5.3.0",
+    "pkg": "^5.8.1",
     "rimraf": "^5.0.5",
     "tsx": "^4.6.0",
     "typescript": "^5.3.0"
+  },
+  "pkg": {
+    "targets": [
+      "node18-win-x64",
+      "node18-linux-x64",
+      "node18-macos-x64",
+      "node18-macos-arm64"
+    ],
+    "outputPath": "bin",
+    "assets": [
+      "dist-pkg/**/*"
+    ],
+    "scripts": [
+      "dist-pkg/**/*.js"
+    ],
+    "patches": {
+      "dist-pkg/src/cli.js": "#!/usr/bin/env node"
+    }
   }
 } 
