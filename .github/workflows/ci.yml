@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests
+        run: bun run test
+
+      - name: Build TypeScript (ES modules)
+        run: bun run build
+
+      - name: Build TypeScript (CommonJS for pkg)
+        run: bun run build:pkg
+
+      - name: Verify CLI works
+        run: |
+          bun run dist/src/cli.js --help
+          bun run dist-pkg/src/cli.js --help
+
+  build-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: macos
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build TypeScript (CommonJS for pkg)
+        run: bun run build:pkg
+
+      - name: Test standalone build
+        run: |
+          if [ "${{ matrix.platform }}" = "win" ]; then
+            bun run build:win
+            ls -la bin/
+            file bin/tree-util-win.exe
+          elif [ "${{ matrix.platform }}" = "linux" ]; then
+            bun run build:linux
+            ls -la bin/
+            file bin/tree-util-linux
+          elif [ "${{ matrix.platform }}" = "macos" ]; then
+            bun run build:macos
+            ls -la bin/
+            file bin/tree-util-macos
+          fi
+
+      - name: Test executable (if not Windows)
+        if: matrix.platform != 'win'
+        run: |
+          if [ "${{ matrix.platform }}" = "linux" ]; then
+            chmod +x bin/tree-util-linux
+            ./bin/tree-util-linux --help
+          elif [ "${{ matrix.platform }}" = "macos" ]; then
+            chmod +x bin/tree-util-macos
+            ./bin/tree-util-macos --help
+          fi

@@ -1,6 +1,6 @@
 {
   "name": "tree-util",
-  "version": "1.0.0",
+  "version": "0.0.2",
   "description": "A utility to create tree-formatted lists from file system paths",
   "main": "dist/index.js",
   "type": "module",

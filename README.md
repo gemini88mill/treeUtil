@@ -16,24 +16,19 @@ A powerful TypeScript/Node.js utility for generating tree-formatted lists from f
 
 ## Installation
 
-### Using npm
+### Standalone Executables (Recommended)
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd TreeUtil
+Download pre-built executables from the [Releases](https://github.com/your-username/TreeUtil/releases) page:
 
-# Install dependencies
-npm install
+- **Windows**: `tree-util-win.exe` - Download and run directly
+- **Linux**: `tree-util-linux` - Make executable with `chmod +x tree-util-linux`
+- **macOS**: `tree-util-macos` - Make executable with `chmod +x tree-util-macos`
 
-# Build the TypeScript code
-npm run build
+No Node.js or dependencies required!
 
-# Make the CLI globally available (optional)
-npm link
-```
+### From Source
 
-### Using Bun
+#### Using Bun (Recommended)
 
 ```bash
 # Clone the repository
@@ -48,6 +43,23 @@ bun run build
 
 # Make the CLI globally available (optional)
 bun link
+```
+
+#### Using npm
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd TreeUtil
+
+# Install dependencies
+npm install
+
+# Build the TypeScript code
+npm run build
+
+# Make the CLI globally available (optional)
+npm link
 ```
 
 ## Usage

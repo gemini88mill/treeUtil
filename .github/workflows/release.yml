@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            binary-name: tree-util-win.exe
+          - os: ubuntu-latest
+            platform: linux
+            binary-name: tree-util-linux
+          - os: macos-latest
+            platform: macos
+            binary-name: tree-util-macos
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build TypeScript (CommonJS for pkg)
+        run: bun run build:pkg
+
+      - name: Build standalone executable
+        run: |
+          if [ "${{ matrix.platform }}" = "win" ]; then
+            bun run build:win
+          elif [ "${{ matrix.platform }}" = "linux" ]; then
+            bun run build:linux
+          elif [ "${{ matrix.platform }}" = "macos" ]; then
+            bun run build:macos
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tree-util-${{ matrix.platform }}
+          path: bin/${{ matrix.binary-name }}
+          retention-days: 30
+
+  create-release:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: TreeUtil ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## TreeUtil ${{ steps.version.outputs.VERSION }}
+
+            ### Downloads
+            - **Windows**: `tree-util-win.exe` - Download and run directly
+            - **Linux**: `tree-util-linux` - Make executable with `chmod +x tree-util-linux`
+            - **macOS**: `tree-util-macos` - Make executable with `chmod +x tree-util-macos`
+
+            ### Installation
+            1. Download the appropriate executable for your platform
+            2. Make it executable (Linux/macOS): `chmod +x tree-util-*`
+            3. Move to a directory in your PATH or use directly
+
+            ### Usage
+            ```bash
+            tree-util                    # Current directory
+            tree-util /path/to/folder    # Specific directory
+            tree-util -L 2 -s -t        # With options
+            ```
+
+            See [STANDALONE.md](https://github.com/${{ github.repository }}/blob/main/STANDALONE.md) for detailed installation instructions.
+          files: |
+            artifacts/tree-util-win/tree-util-win.exe
+            artifacts/tree-util-linux/tree-util-linux
+            artifacts/tree-util-macos/tree-util-macos
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
