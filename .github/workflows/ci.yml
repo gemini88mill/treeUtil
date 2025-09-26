@@ -68,29 +68,35 @@ jobs:
       - name: Build TypeScript (CommonJS for pkg)
         run: bun run build:pkg
 
-      - name: Test standalone build
+      - name: Test standalone build (Windows)
+        if: matrix.platform == 'win'
         run: |
-          if [ "${{ matrix.platform }}" = "win" ]; then
-            bun run build:win
-            ls -la bin/
-            file bin/tree-util-win.exe
-          elif [ "${{ matrix.platform }}" = "linux" ]; then
-            bun run build:linux
-            ls -la bin/
-            file bin/tree-util-linux
-          elif [ "${{ matrix.platform }}" = "macos" ]; then
-            bun run build:macos
-            ls -la bin/
-            file bin/tree-util-macos
-          fi
+          bun run build:win
+          dir bin/
+          file bin/tree-util-win.exe
 
-      - name: Test executable (if not Windows)
-        if: matrix.platform != 'win'
+      - name: Test standalone build (Linux)
+        if: matrix.platform == 'linux'
         run: |
-          if [ "${{ matrix.platform }}" = "linux" ]; then
-            chmod +x bin/tree-util-linux
-            ./bin/tree-util-linux --help
-          elif [ "${{ matrix.platform }}" = "macos" ]; then
-            chmod +x bin/tree-util-macos
-            ./bin/tree-util-macos --help
-          fi
+          bun run build:linux
+          ls -la bin/
+          file bin/tree-util-linux
+
+      - name: Test standalone build (macOS)
+        if: matrix.platform == 'macos'
+        run: |
+          bun run build:macos
+          ls -la bin/
+          file bin/tree-util-macos
+
+      - name: Test executable (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          chmod +x bin/tree-util-linux
+          ./bin/tree-util-linux --help
+
+      - name: Test executable (macOS)
+        if: matrix.platform == 'macos'
+        run: |
+          chmod +x bin/tree-util-macos
+          ./bin/tree-util-macos --help

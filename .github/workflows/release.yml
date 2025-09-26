@@ -42,15 +42,17 @@ jobs:
       - name: Build TypeScript (CommonJS for pkg)
         run: bun run build:pkg
 
-      - name: Build standalone executable
-        run: |
-          if [ "${{ matrix.platform }}" = "win" ]; then
-            bun run build:win
-          elif [ "${{ matrix.platform }}" = "linux" ]; then
-            bun run build:linux
-          elif [ "${{ matrix.platform }}" = "macos" ]; then
-            bun run build:macos
-          fi
+      - name: Build standalone executable (Windows)
+        if: matrix.platform == 'win'
+        run: bun run build:win
+
+      - name: Build standalone executable (Linux)
+        if: matrix.platform == 'linux'
+        run: bun run build:linux
+
+      - name: Build standalone executable (macOS)
+        if: matrix.platform == 'macos'
+        run: bun run build:macos
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
