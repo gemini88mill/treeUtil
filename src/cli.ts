@@ -178,7 +178,7 @@ program
         treeOptions.excludePatterns.push("*/");
       }
 
-      const tree = TreeUtil.generate(targetPath, treeOptions);
+      const tree = await TreeUtil.generate(targetPath, treeOptions);
 
       if (options.output) {
         const fs = await import("fs");

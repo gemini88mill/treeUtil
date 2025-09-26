@@ -1,5 +1,5 @@
-import fs from "fs";
 import path from "path";
+import { readdir } from "fs/promises";
 import { TreeOptions, FileSystemItem } from "./types.js";
 
 /**
@@ -25,14 +25,15 @@ export class TreeUtil {
    * @param rootPath - The root path to generate tree from
    * @returns The formatted tree string
    */
-  public generateTree(rootPath: string): string {
+  public async generateTree(rootPath: string): Promise<string> {
     const absolutePath = path.resolve(rootPath);
+    const file = Bun.file(absolutePath);
 
-    if (!fs.existsSync(absolutePath)) {
+    if (!(await file.exists())) {
       throw new Error(`Path does not exist: ${rootPath}`);
     }
 
-    const stats = fs.statSync(absolutePath);
+    const stats = await file.stat();
     if (!stats.isDirectory()) {
       return this.formatFile(absolutePath, "", true);
     }
@@ -48,12 +49,12 @@ export class TreeUtil {
    * @param depth - Current depth level
    * @returns Formatted directory string
    */
-  private formatDirectory(
+  private async formatDirectory(
     dirPath: string,
     prefix: string = "",
     isLast: boolean = true,
     depth: number = 0
-  ): string {
+  ): Promise<string> {
     const dirName = path.basename(dirPath);
     let result = `${prefix}${isLast ? "└── " : "├── "}${dirName}/\n`;
 
@@ -63,8 +64,8 @@ export class TreeUtil {
     }
 
     try {
-      const items = this.getDirectoryItems(dirPath);
-      const filteredItems = this.filterItems(items, dirPath);
+      const items = await this.getDirectoryItems(dirPath);
+      const filteredItems = await this.filterItems(items, dirPath);
 
       if (filteredItems.length === 0) {
         return result;
@@ -78,16 +79,17 @@ export class TreeUtil {
         const isLastItem = i === filteredItems.length - 1;
 
         try {
-          const stats = fs.statSync(itemPath);
+          const file = Bun.file(itemPath);
+          const stats = await file.stat();
           if (stats.isDirectory()) {
-            result += this.formatDirectory(
+            result += await this.formatDirectory(
               itemPath,
               newPrefix,
               isLastItem,
               depth + 1
             );
           } else {
-            result += this.formatFile(itemPath, newPrefix, isLastItem);
+            result += await this.formatFile(itemPath, newPrefix, isLastItem);
           }
         } catch (error) {
           // Skip items that can't be accessed
@@ -108,17 +110,18 @@ export class TreeUtil {
    * @param isLast - Whether this is the last item at this level
    * @returns Formatted file string
    */
-  private formatFile(
+  private async formatFile(
     filePath: string,
     prefix: string = "",
     isLast: boolean = true
-  ): string {
+  ): Promise<string> {
     const fileName = path.basename(filePath);
     let result = `${prefix}${isLast ? "└── " : "├── "}${fileName}`;
 
     if (this.options.showSize || this.options.showDate) {
       try {
-        const stats = fs.statSync(filePath);
+        const file = Bun.file(filePath);
+        const stats = await file.stat();
         const details: string[] = [];
 
         if (this.options.showSize) {
@@ -145,8 +148,14 @@ export class TreeUtil {
    * @param dirPath - Directory path
    * @returns Array of item names
    */
-  private getDirectoryItems(dirPath: string): string[] {
-    return fs.readdirSync(dirPath);
+  private async getDirectoryItems(dirPath: string): Promise<string[]> {
+    const dir = Bun.file(dirPath);
+    if (!(await dir.exists()) || !(await dir.stat()).isDirectory()) {
+      return [];
+    }
+
+    // Use fs/promises readdir for directory listing (Bun doesn't have a native readdir)
+    return await readdir(dirPath);
   }
 
   /**
@@ -155,7 +164,10 @@ export class TreeUtil {
    * @param parentPath - Parent directory path
    * @returns Filtered array of item names
    */
-  private filterItems(items: string[], parentPath: string): string[] {
+  private async filterItems(
+    items: string[],
+    parentPath: string
+  ): Promise<string[]> {
     let filteredItems = items.filter((item) => {
       // Skip hidden files if not showing hidden
       if (!this.options.showHidden && item.startsWith(".")) {
@@ -186,23 +198,28 @@ export class TreeUtil {
 
     // Sort items if sorting is enabled
     if (this.options.sort) {
-      filteredItems.sort((a, b) => {
-        // Sort directories first, then alphabetically
-        const aPath = path.join(parentPath, a);
-        const bPath = path.join(parentPath, b);
+      // For async sorting, we need to collect stats first
+      const itemsWithStats = await Promise.all(
+        filteredItems.map(async (item) => {
+          const itemPath = path.join(parentPath, item);
+          try {
+            const file = Bun.file(itemPath);
+            const stats = await file.stat();
+            return { item, isDirectory: stats.isDirectory() };
+          } catch (error) {
+            return { item, isDirectory: false };
+          }
+        })
+      );
 
-        try {
-          const aStats = fs.statSync(aPath);
-          const bStats = fs.statSync(bPath);
-
-          if (aStats.isDirectory() && !bStats.isDirectory()) return -1;
-          if (!aStats.isDirectory() && bStats.isDirectory()) return 1;
-
-          return a.localeCompare(b);
-        } catch (error) {
-          return a.localeCompare(b);
-        }
-      });
+      filteredItems = itemsWithStats
+        .sort((a, b) => {
+          // Sort directories first, then alphabetically
+          if (a.isDirectory && !b.isDirectory) return -1;
+          if (!a.isDirectory && b.isDirectory) return 1;
+          return a.item.localeCompare(b.item);
+        })
+        .map(({ item }) => item);
     }
 
     return filteredItems;
@@ -244,17 +261,18 @@ export class TreeUtil {
    * @param dirPath - Directory path
    * @returns Array of file system items
    */
-  public getFileSystemItems(dirPath: string): FileSystemItem[] {
+  public async getFileSystemItems(dirPath: string): Promise<FileSystemItem[]> {
     const items: FileSystemItem[] = [];
 
     try {
-      const itemNames = this.getDirectoryItems(dirPath);
-      const filteredItems = this.filterItems(itemNames, dirPath);
+      const itemNames = await this.getDirectoryItems(dirPath);
+      const filteredItems = await this.filterItems(itemNames, dirPath);
 
       for (const item of filteredItems) {
         const itemPath = path.join(dirPath, item!);
         try {
-          const stats = fs.statSync(itemPath);
+          const file = Bun.file(itemPath);
+          const stats = await file.stat();
           items.push({
             name: item,
             path: itemPath,
@@ -279,9 +297,12 @@ export class TreeUtil {
    * @param options - Options for tree generation
    * @returns The formatted tree string
    */
-  public static generate(rootPath: string, options: TreeOptions = {}): string {
+  public static async generate(
+    rootPath: string,
+    options: TreeOptions = {}
+  ): Promise<string> {
     const treeUtil = new TreeUtil(options);
-    return treeUtil.generateTree(rootPath);
+    return await treeUtil.generateTree(rootPath);
   }
 }
 
