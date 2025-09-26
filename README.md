@@ -16,6 +16,8 @@ A powerful TypeScript/Node.js utility for generating tree-formatted lists from f
 
 ## Installation
 
+### Using npm
+
 ```bash
 # Clone the repository
 git clone <repository-url>
@@ -31,11 +33,30 @@ npm run build
 npm link
 ```
 
+### Using Bun
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd TreeUtil
+
+# Install dependencies
+bun install
+
+# Build the TypeScript code
+bun run build
+
+# Make the CLI globally available (optional)
+bun link
+```
+
 ## Usage
 
 ### Command Line Interface
 
 The tree utility can be used directly from the command line:
+
+#### Using npm/tsx
 
 ```bash
 # Basic usage - show tree of current directory
@@ -70,6 +91,46 @@ npm run dev help
 npm start
 ```
 
+#### Using Bun
+
+```bash
+# Basic usage - show tree of current directory
+bun run dev
+
+# Show tree of specific directory
+bun run dev /path/to/directory
+
+# Show hidden files
+bun run dev -a
+
+# Limit depth to 2 levels
+bun run dev -L 2
+
+# Show file sizes and dates
+bun run dev -s -t
+
+# Exclude node_modules
+bun run dev -I "node_modules"
+
+# Show only JavaScript files
+bun run dev -P "*.js"
+
+# Save output to file
+bun run dev -o tree.txt
+
+# Show help information
+bun run dev -- --help
+bun run dev help
+
+# Or use the built version
+bun start
+
+# Direct execution with bun (no build required)
+bun src/cli.ts
+bun src/cli.ts /path/to/directory
+bun src/cli.ts -a -s -t
+```
+
 ### Command Line Options
 
 | Option                    | Description                               |
@@ -88,7 +149,7 @@ npm start
 
 ### Programmatic API
 
-You can also use the tree utility programmatically in your Node.js applications:
+You can also use the tree utility programmatically in your Node.js or Bun applications:
 
 ```typescript
 import TreeUtil from "./src/index.js";
@@ -115,6 +176,16 @@ const treeUtil = new TreeUtil({
 });
 const customTree = treeUtil.generateTree("./my-directory");
 console.log(customTree);
+```
+
+#### Running with Bun
+
+```typescript
+// Direct execution with bun
+bun run example.ts
+
+// Or in a Bun script
+bun --bun src/index.ts
 ```
 
 ## API Reference
@@ -225,6 +296,13 @@ npm run dev -- --help
 npx tsx src/cli.ts --help
 # or (built version)
 node dist/src/cli.js --help
+
+# With Bun
+bun run dev -- --help
+# or
+bun src/cli.ts --help
+# or (built version)
+bun dist/src/cli.js --help
 ```
 
 ### Detailed Help
@@ -236,6 +314,13 @@ npm run dev help
 npx tsx src/cli.ts help
 # or (built version)
 node dist/src/cli.js help
+
+# With Bun
+bun run dev help
+# or
+bun src/cli.ts help
+# or (built version)
+bun dist/src/cli.js help
 ```
 
 The detailed help includes:
@@ -252,7 +337,11 @@ The detailed help includes:
 Run the test suite to see the utility in action:
 
 ```bash
+# With npm
 npm test
+
+# With Bun
+bun test
 ```
 
 This will create a temporary directory structure and demonstrate various features of the tree utility.
@@ -262,7 +351,11 @@ This will create a temporary directory structure and demonstrate various feature
 See `example.ts` for a comprehensive demonstration of the tree utility features:
 
 ```bash
+# With npm/tsx
 npx tsx example.ts
+
+# With Bun
+bun example.ts
 ```
 
 This will show various examples including:
