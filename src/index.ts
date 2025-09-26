@@ -1,5 +1,5 @@
 import path from "path";
-import { readdir } from "fs/promises";
+import { readdir, stat, exists } from "fs/promises";
 import { TreeOptions, FileSystemItem } from "./types.js";
 
 /**
@@ -27,13 +27,12 @@ export class TreeUtil {
    */
   public async generateTree(rootPath: string): Promise<string> {
     const absolutePath = path.resolve(rootPath);
-    const file = Bun.file(absolutePath);
 
-    if (!(await file.exists())) {
+    if (!(await exists(absolutePath))) {
       throw new Error(`Path does not exist: ${rootPath}`);
     }
 
-    const stats = await file.stat();
+    const stats = await stat(absolutePath);
     if (!stats.isDirectory()) {
       return this.formatFile(absolutePath, "", true);
     }
@@ -79,8 +78,7 @@ export class TreeUtil {
         const isLastItem = i === filteredItems.length - 1;
 
         try {
-          const file = Bun.file(itemPath);
-          const stats = await file.stat();
+          const stats = await stat(itemPath);
           if (stats.isDirectory()) {
             result += await this.formatDirectory(
               itemPath,
@@ -120,8 +118,7 @@ export class TreeUtil {
 
     if (this.options.showSize || this.options.showDate) {
       try {
-        const file = Bun.file(filePath);
-        const stats = await file.stat();
+        const stats = await stat(filePath);
         const details: string[] = [];
 
         if (this.options.showSize) {
@@ -149,13 +146,15 @@ export class TreeUtil {
    * @returns Array of item names
    */
   private async getDirectoryItems(dirPath: string): Promise<string[]> {
-    const dir = Bun.file(dirPath);
-    if (!(await dir.exists()) || !(await dir.stat()).isDirectory()) {
+    try {
+      const stats = await stat(dirPath);
+      if (!stats.isDirectory()) {
+        return [];
+      }
+      return await readdir(dirPath);
+    } catch (error) {
       return [];
     }
-
-    // Use fs/promises readdir for directory listing (Bun doesn't have a native readdir)
-    return await readdir(dirPath);
   }
 
   /**
@@ -203,8 +202,7 @@ export class TreeUtil {
         filteredItems.map(async (item) => {
           const itemPath = path.join(parentPath, item);
           try {
-            const file = Bun.file(itemPath);
-            const stats = await file.stat();
+            const stats = await stat(itemPath);
             return { item, isDirectory: stats.isDirectory() };
           } catch (error) {
             return { item, isDirectory: false };
@@ -271,8 +269,7 @@ export class TreeUtil {
       for (const item of filteredItems) {
         const itemPath = path.join(dirPath, item!);
         try {
-          const file = Bun.file(itemPath);
-          const stats = await file.stat();
+          const stats = await stat(itemPath);
           items.push({
             name: item,
             path: itemPath,
